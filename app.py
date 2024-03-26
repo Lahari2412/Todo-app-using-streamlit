@@ -55,7 +55,7 @@ def view_unique_tasks():
 def main():
     st.title("ToDo App With Streamlit")
 
-    menu=["Create","Read","Update","Delete","About"]
+    menu=["Create","Read","Update","Delete"]
     choice=st.sidebar.selectbox("Menu",menu)
      
     if choice == "Create":
@@ -131,9 +131,7 @@ def main():
             st.success("Task has been successfully deleted")
 
         
-    else:
-        st.subheader("About")
-        # You can provide information about your app here
+   
 
 if __name__ == '__main__':
     main()
