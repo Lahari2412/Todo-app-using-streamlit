@@ -1,7 +1,7 @@
-
 import streamlit as st
 import pandas as pd
 import sqlite3
+import plotly.express as px
 
 # Define functions to interact with the database
 
@@ -35,12 +35,20 @@ def update_data(task, task_status, task_due_date, new_task, new_task_status, new
     conn.commit()
     conn.close()
 
-def delete_data(task, task_status, task_due_date):
+def delete_data(task):
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
-    c.execute('DELETE FROM taskstable WHERE task=? AND task_status=? AND task_due_date=?', (task, task_status, task_due_date))
+    c.execute('DELETE FROM taskstable WHERE task=?', (task,))
     conn.commit()
     conn.close()
+
+def view_unique_tasks():
+    conn = sqlite3.connect('data.db')
+    c = conn.cursor()
+    c.execute('SELECT DISTINCT task FROM taskstable')
+    data = c.fetchall()
+    conn.close()
+    return data
 
 # Main function for Streamlit app
 
@@ -73,7 +81,17 @@ def main():
         result = view_all_data()
         if result:
             df = pd.DataFrame(result, columns=['Task', 'Status', 'Due Date'])
-            st.dataframe(df)
+            with st.expander("View All Data"):
+                st.dataframe(df)
+            
+            with st.expander("Task Status"):
+                task_df = df['Status'].value_counts().to_frame()
+                task_df = task_df.reset_index()
+                st.dataframe(task_df)
+
+                p1 = px.pie(task_df, names='Status', values='count')
+                st.plotly_chart(p1)
+
         else:
             st.write("No tasks found.")
 
@@ -82,37 +100,40 @@ def main():
         result = view_all_data()
         if result:
             df = pd.DataFrame(result, columns=['Task', 'Status', 'Due Date'])
-            st.dataframe(df)
-            task_to_update = st.text_input("Enter the task to update")
+            with st.expander("Current Data"):
+                st.dataframe(df)
+
+            list_of_tasks = [i[0] for i in view_unique_tasks()]
+            selected_task = st.selectbox("Task To Edit", list_of_tasks)
+
+            task_status = st.selectbox("Status", ["ToDo", "Doing", "Done"])
+            task_due_date = st.date_input("Due Date")
+
             if st.button("Update Task"):
-                new_task = st.text_area("Task To Do")
-                new_task_status = st.selectbox("Status", ["ToDo", "Doing", "Done"])
-                new_task_due_date = st.date_input("Due Date")
-                update_data(task_to_update, df[df['Task'] == task_to_update]['Status'].iloc[0],
-                            df[df['Task'] == task_to_update]['Due Date'].iloc[0],
-                            new_task, new_task_status, new_task_due_date)
+                update_data(selected_task, task_status, task_due_date, selected_task, task_status, task_due_date)
                 st.success("Task Updated Successfully")
+
         else:
             st.write("No tasks found.")
 
     elif choice == "Delete":
         st.subheader("Delete Items")
         result = view_all_data()
-        if result:
-            df = pd.DataFrame(result, columns=['Task', 'Status', 'Due Date'])
+        df = pd.DataFrame(result, columns=['Task', 'Status', 'Due Date'])
+        with st.expander("Current Data"):
             st.dataframe(df)
-            task_to_delete = st.text_input("Enter the task to delete")
-            if st.button("Delete Task"):
-                delete_data(task_to_delete, df[df['Task'] == task_to_delete]['Status'].iloc[0],
-                            df[df['Task'] == task_to_delete]['Due Date'].iloc[0])
-                st.success("Task Deleted Successfully")
-        else:
-            st.write("No tasks found.")
- 
+        
+        list_of_tasks = [i[0] for i in view_unique_tasks()]
+        selected_task = st.selectbox("Task To Delete", list_of_tasks)
+        st.warning("Do you want to delete {}".format(selected_task))
+        if st.button("Delete Task"):
+            delete_data(selected_task)
+            st.success("Task has been successfully deleted")
+
+        
     else:
         st.subheader("About")
         # You can provide information about your app here
-
 
 if __name__ == '__main__':
     main()
