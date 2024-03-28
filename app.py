@@ -25,13 +25,12 @@ def view_all_data():
     c.execute('SELECT * FROM taskstable')
     data = c.fetchall()
     conn.close()
-    return data
+    return [row for row in data if row[0]]
 
-def update_data(task, task_status, task_due_date, new_task, new_task_status, new_task_due_date):
+def update_data(task, new_task_status, new_task_due_date):
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
-    c.execute('UPDATE taskstable SET task=?, task_status=?, task_due_date=? WHERE task=? AND task_status=? AND task_due_date=?',
-              (new_task, new_task_status, new_task_due_date, task, task_status, task_due_date))
+    c.execute('UPDATE taskstable SET task_status=?, task_due_date=? WHERE task=?', (new_task_status, new_task_due_date, task))
     conn.commit()
     conn.close()
 
@@ -45,7 +44,7 @@ def delete_data(task):
 def view_unique_tasks():
     conn = sqlite3.connect('data.db')
     c = conn.cursor()
-    c.execute('SELECT DISTINCT task FROM taskstable')
+    c.execute('SELECT DISTINCT task FROM taskstable WHERE task IS NOT NULL AND task != ""')
     data = c.fetchall()
     conn.close()
     return data
@@ -106,11 +105,11 @@ def main():
             list_of_tasks = [i[0] for i in view_unique_tasks()]
             selected_task = st.selectbox("Task To Edit", list_of_tasks)
 
-            task_status = st.selectbox("Status", ["ToDo", "Doing", "Done"])
-            task_due_date = st.date_input("Due Date")
+            new_task_status = st.selectbox("Status", ["ToDo", "Doing", "Done"])
+            new_task_due_date = st.date_input("Due Date")
 
             if st.button("Update Task"):
-                update_data(selected_task, task_status, task_due_date, selected_task, task_status, task_due_date)
+                update_data(selected_task, new_task_status, new_task_due_date)
                 st.success("Task Updated Successfully")
 
         else:
